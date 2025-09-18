@@ -1,17 +1,8 @@
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2 import model_zoo
-import cv2
+import models.yolo_funcs as yolo_f
+import models.mask_r_cnn_funcs as mask_f
 
-cfg = get_cfg()
-cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+model=yolo_f.load_yolo_model()
+yolo_f.load_img_to_model("aruco test 3.jpg",model)
 
-predictor = DefaultPredictor(cfg)
-
-img = cv2.imread("papa.jpg")
-outputs = predictor(img)
-
-print(outputs["instances"].pred_classes)  # clases detectadas
-print(outputs["instances"].pred_masks)    # máscaras binarias
+# model=mask_f.load_mask_r_cnn_model()
+# mask_f.extract_mask(model,"aruco test 3.jpg")

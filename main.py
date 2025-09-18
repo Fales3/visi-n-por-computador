@@ -1,5 +1,4 @@
 import segment_funcs.segmentacion as seg
-import segment_funcs.segment_with_IA as seg_ia
 
 event={
     "img_name":"aruco test.jpg",
@@ -9,4 +8,4 @@ event={
     "show":True
 }
 
-seg.classic_segment_img("aruco test.jpg")
+seg.classic_segment_img("aruco test 3.jpg",True, "median", "adaptative", True)

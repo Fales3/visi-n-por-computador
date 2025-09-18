@@ -205,3 +205,6 @@ __marimo__/
 # Custom ignore rules
 envMDW.json
 test/
+test.py
+yolov8s-seg.pt
+dataset
