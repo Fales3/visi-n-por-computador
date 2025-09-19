@@ -208,3 +208,4 @@ test/
 test.py
 yolov8s-seg.pt
 dataset
+runs/

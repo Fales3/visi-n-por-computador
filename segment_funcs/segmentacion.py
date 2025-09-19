@@ -40,11 +40,26 @@ def classic_segment_img(img_name:str, is_aruco: bool= True, blurring_method: str
     if show is True:
         img_f.show_img(img_contours)
 
+def generate_masks(img_path, out_path):
+    img=cv2.imread(img_path)
+    gray=img_f.img_to_grayscale(img)
+    gray_inv = 255 - gray
 
-def segment_with_aruco(img_name: str):
+    th = img_f.threshold_img(gray_inv, "simple", 255, 30)
 
-    img_f.select_img(img_name)
-    img=cv2.imread(os.environ.get("IMAGE_PATH"))
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img=img_f.img_to_grayscale(img)
-    img_rgb=ar_f.detect_aruco(img, img_rgb)
+    mask=img_f.morphology(th)
+
+    cv2.imwrite(out_path, mask)
+
+    return mask
+
+def save_masks(in_dir: str, out_dir: str):
+    os.makedirs(out_dir, exist_ok=True)
+
+    for file in os.listdir(in_dir):
+        if file.lower().endswith((".jpg", ".png", ".jpeg")):
+            img_path = os.path.join(in_dir, file)
+            mask_path = os.path.join(out_dir, file)
+            
+            mask = generate_masks(img_path, mask_path)
+            print(f"Máscara generada: {mask_path}")

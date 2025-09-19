@@ -26,17 +26,20 @@ def blur_img(img, method:str):
 
     return img
 
-def threshold_img(img, method):
+def threshold_img(img, method, maxval: float=255, thresh:float=0):
     if method=="adaptative":
         print("Método adaptativo")
         th = cv2.adaptiveThreshold(
-            img, 255,
+            img, maxval,
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 51, 7
         )
     elif method=="OTSU":
         print("Método OTSU")
-        _, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _, th = cv2.threshold(img, thresh, maxval, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    elif method=="simple":
+        print("simple")
+        _, th = cv2.threshold(img, thresh, maxval, cv2.THRESH_BINARY)
     else:
         raise ValueError("Método inválido")
 
@@ -45,8 +48,10 @@ def threshold_img(img, method):
 def morphology(img):
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    #Apertura: quita ruido pequeño
     th = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
-    th = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
+    #Cierre: rellena huecos
+    th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
 
     return th
 
@@ -69,3 +74,4 @@ def show_img(img):
     plt.title("Imagen")
     plt.axis('off')
     plt.show()
+
