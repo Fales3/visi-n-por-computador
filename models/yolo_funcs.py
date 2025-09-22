@@ -14,7 +14,7 @@ def load_yolo_model():
     from ultralytics import YOLO
 
     # Modelo preentrenado (puedes empezar con coco)
-    model = YOLO("yolov8s-seg.pt")
+    model = YOLO("yolo11s-seg.pt")
 
     return model
 

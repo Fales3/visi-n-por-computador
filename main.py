@@ -8,4 +8,4 @@ event={
     "show":True
 }
 
-seg.classic_segment_img("aruco test 3.jpg",True, "median", "adaptative", True)
+seg.classic_segment_img("aruco test.jpg",True, "median", "adaptative", True)
