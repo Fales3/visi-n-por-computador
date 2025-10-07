@@ -2,12 +2,14 @@ import os
 import cv2
 
 def select_img(file_name:str)->None:
-    img_path= f"./images/{file_name}"
+    img_path= f"./{file_name}"
 
     if not os.path.exists(img_path):
         raise FileNotFoundError(f"La imagen {file_name} no existe")
     
-    os.environ["IMAGE_PATH"]=img_path
+    img=cv2.imread(img_path)
+
+    return img
 
 def img_to_grayscale(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -39,7 +41,7 @@ def threshold_img(img, method, maxval: float=255, thresh:float=0):
         _, th = cv2.threshold(img, thresh, maxval, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     elif method=="simple":
         print("simple")
-        _, th = cv2.threshold(img, thresh, maxval, cv2.THRESH_BINARY)
+        _, th = cv2.threshold(img, thresh, maxval, cv2.THRESH_BINARY_INV)
     else:
         raise ValueError("Método inválido")
 
@@ -62,7 +64,6 @@ def refine_contour(c):
 
 def find_contours(img):
     contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours = [refine_contour(c) for c in contours if cv2.contourArea(c) > 2000]
 
     return contours
 
@@ -75,3 +76,22 @@ def show_img(img):
     plt.axis('off')
     plt.show()
 
+def verify_mask(filename: str):
+    import numpy as np
+    img_path="dataset/images/train/"+filename+".jpg"
+    label_path="dataset/labels/train/"+filename+".txt"
+    
+    select_img(img_path)
+    img=cv2.imread(os.environ.get("IMAGE_PATH"))
+
+    h, w = img.shape[:2]
+    with open(label_path, "r") as f:
+        for line in f.readlines():
+            parts = line.strip().split()
+            cls = int(parts[0])
+            coords = list(map(float, parts[1:]))
+            points = [(int(coords[i] * w), int(coords[i+1] * h)) for i in range(0, len(coords), 2)]
+            cv2.polylines(img, [np.array(points)], isClosed=True, color=(0,255,0), thickness=2)
+
+    # Mostrar
+    show_img(img)

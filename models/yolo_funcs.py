@@ -1,8 +1,8 @@
 import cv2
 import os
-
+import numpy as np
 import segment_funcs.img_funcs as img_f
-
+import segment_funcs.segmentacion as seg
 """
 YOLOv8-seg:                 rápido y ligero, precisión media.
 Mask R-CNN:                 mayor precisión, más pesado y lento.
@@ -13,18 +13,35 @@ U-Net:                      Fotos individuales
 def load_yolo_model():
     from ultralytics import YOLO
 
-    # Modelo preentrenado (puedes empezar con coco)
-    model = YOLO("yolo11s-seg.pt")
+    model = YOLO("yolo11m-seg.pt")
 
     return model
 
-def load_img_to_model(img_name, model):
-
-    img_f.select_img(img_name)
-    img=cv2.imread(os.environ.get("IMAGE_PATH"))
+def load_img_to_model(img_name, model, factor_px_cm= 1):
+    
+    img=img_f.select_img(img_name)
     results = model(img)
 
-    masks = results[0].masks #Info de las máscaras
+    for i, mask in enumerate(results[0].masks.data):
+        # convertir tensor a imagen binaria
+        mask_np = mask.cpu().numpy().astype("uint8") * 255
+
+        # 2. Reescalar la máscara al tamaño original
+        mask_np = cv2.resize(
+            mask_np, 
+            (img.shape[1], img.shape[0]),  # ancho, alto de la original
+            interpolation=cv2.INTER_NEAREST
+        )
+        
+        # encontrar contornos
+        contours=img_f.find_contours(mask_np)
+        img_contours=cv2.cvtColor(mask_np, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(img_contours, contours, -1, (0, 255, 0), 5)
+        
+        if len(contours) > 0:
+            cnt = contours[0]
+            seg.measurement_with_contours(img_contours, cnt, factor_px_cm)
+
     
     for r in results:
         for box in r.boxes:
@@ -34,47 +51,32 @@ def load_img_to_model(img_name, model):
             print(f"Objeto detectado: {model.names[cls]}, confianza: {conf:.2f}")
             print(f"Caja: {x1}, {y1}, {x2}, {y2}")
 
-    results[0].plot(show=True)
+    return results[0]
 
-def get_yolo_format(path_name: str):
-    #Rutas de entrada
-    img_dir_train = path_name+"images/train"
-    mask_dir_train = path_name+"masks/train"
-    img_dir_val = path_name+"images/val"
-    mask_dir_val = path_name+"masks/val"
+def load_img_to_model_calibrated(img_name, model, camera_matrix, dist_coeffs, rvec, tvec):
+    img = img_f.select_img(img_name)
+    results = model(img)
 
-    #Rutas de salida
-    out_lbl_train = path_name+"labels/train"
-    out_lbl_val = path_name+"labels/val"
+    for i, mask in enumerate(results[0].masks.data):
+        mask_np = mask.cpu().numpy().astype("uint8") * 255
+        mask_np = cv2.resize(mask_np, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    for d in [out_lbl_train, out_lbl_val]:
-        os.makedirs(d, exist_ok=True)
+        contours = img_f.find_contours(mask_np)
+        img_contours = cv2.cvtColor(mask_np, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(img_contours, contours, -1, (0, 255, 0), 2)
+        img_f.show_img(img_contours)
 
-    process_split(img_dir_train, mask_dir_train, out_lbl_train)
-    process_split(img_dir_val, mask_dir_val, out_lbl_val)
+        if len(contours) > 0:
+            cnt = contours[0]
 
-def process_split(img_dir: str, mask_dir: str, out_lbl_dir: str):
-    for fname in os.listdir(img_dir):
-        if not fname.endswith(".jpg"):
-            continue
+            seg.measurements_with_pose(img_contours, cnt, camera_matrix, rvec, tvec)
 
-        # Generar label desde máscara
-        mask_path = os.path.join(mask_dir, fname)
-        label_path = os.path.join(out_lbl_dir, fname.replace(".jpg", ".txt"))
-        if os.path.exists(mask_path):
-            mask_to_yolo(mask_path, label_path)
+    for r in results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = box.xyxy[0]
+            conf = box.conf[0]
+            cls = int(box.cls[0])
+            print(f"Objeto detectado: {model.names[cls]}, conf: {conf:.2f}")
+            print(f"Caja: {x1}, {y1}, {x2}, {y2}")
 
-def mask_to_yolo(mask_path: str, label_path: str, class_id=0):
-    mask=cv2.imread(mask_path, 0)
-    contours=img_f.find_contours(mask)
-    cnt = max(contours, key=cv2.contourArea)
-    h, w = mask.shape
-    poly = []
-    for point in cnt:
-        x, y = point[0]
-        poly.append(f"{x/w:.6f}")
-        poly.append(f"{y/h:.6f}")
-
-    # Guardar en archivo .txt
-    with open(label_path, "w") as f:
-        f.write(f"{class_id} " + " ".join(poly) + "\n")
+    return results[0]
