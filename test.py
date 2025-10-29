@@ -1,12 +1,8 @@
-import os
-import cv2
-import numpy as np
-import segment_funcs.img_funcs as img_f
-import aruco.aruco_funcs as ar_f
-import aruco.aruco_board as ar_b
-import segment_funcs.segmentacion as seg
-import models.yolo_funcs as yolo_f
-import models.mask_r_cnn_funcs as mask_f
+import test_folder.aruco_board as ar_b
+import test_folder.segmentacion as seg
 
-ar_b.process_img_with_pose("./images/aruco test 6.jpg", "./results/charuco/charuco_calibration.npz", False)
+#Con pose de cámara:
+ar_b.process_img_with_pose_and_contour("./images/charuco test 3.jpg", "./results/charuco/charuco_calibration.npz", True, "mask", white_background=False)
 
+# sin pose de cámara:
+seg.segment_with_aruco_and_mask("./images/aruco test 6.jpg", "mask", white_background=False, aruco_side_cm=4.9, show_img=True)

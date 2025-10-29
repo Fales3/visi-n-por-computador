@@ -123,7 +123,7 @@ def load_calibration(filename: str):
 
     return camera_matrix, dist_coeffs
 
-def detect_charuco_pose(img, camera_matrix, dist_coeffs):
+def detect_charuco_pose(img, camera_matrix, dist_coeffs, marker_length: float= 0.049):
     aruco_dict, parameters= ar_f.get_aruco_dict()
     charuco_board=get_aruco_board(aruco_dict, (5, 7), 0.029 ,0.019)
     detector = cv2.aruco.CharucoDetector(charuco_board)
@@ -146,7 +146,7 @@ def detect_charuco_pose(img, camera_matrix, dist_coeffs):
             print("tvec:", tvec)
 
             # Dibuja el eje del tablero
-            cv2.drawFrameAxes(img, camera_matrix, dist_coeffs, rvec, tvec, 0.05)
+            cv2.drawFrameAxes(img, camera_matrix, dist_coeffs, rvec, tvec, marker_length)
             img_f.show_img(img)
 
             return rvec, tvec
@@ -154,13 +154,12 @@ def detect_charuco_pose(img, camera_matrix, dist_coeffs):
         print("No se detectaron suficientes esquinas ChArUco.")
         return None, None
 
-def detect_aruco_pose(img, camera_matrix, dist_coeffs):
+def detect_aruco_pose(img, camera_matrix, dist_coeffs, marker_length: float= 0.049):
     aruco_dict, parameters = ar_f.get_aruco_dict()
     detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     corners, ids, rejected = detector.detectMarkers(img)
 
     if ids is not None and len(ids) > 0:
-        marker_length = 0.049  # tamaño real del marcador (en metros)
         rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
             corners, marker_length, camera_matrix, dist_coeffs
         )
@@ -184,19 +183,21 @@ def detect_aruco_pose(img, camera_matrix, dist_coeffs):
         return None, None
 
     
-def process_img_with_pose(img_name: str, filename: str,  use_charuco: False):
+def process_img_with_pose(img_name: str, filename: str,  use_charuco: False, marker_length: float= 0.049, white_background:bool= False):
     camera_matrix, dist_coeffs= load_calibration(filename)
     img= img_f.select_img(img_name)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    if not white_background:
+        gray=img_f.img_to_grayscale(img)
+        _, img = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
     if use_charuco:
-        rvec, tvec= detect_charuco_pose(img, camera_matrix, dist_coeffs)
+        rvec, tvec= detect_charuco_pose(img, camera_matrix, dist_coeffs, marker_length)
     else:
-        rvec, tvec= detect_aruco_pose(img, camera_matrix, dist_coeffs)
+        rvec, tvec= detect_aruco_pose(img, camera_matrix, dist_coeffs, marker_length)
 
     model=yolo_f.load_yolo_model()
     results= yolo_f.load_img_to_model_calibrated(img_name, model, camera_matrix, dist_coeffs, rvec, tvec)
     img_f.show_img(results.plot(show=False))
-
-    
 

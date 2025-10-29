@@ -75,23 +75,3 @@ def show_img(img):
     plt.title("Imagen")
     plt.axis('off')
     plt.show()
-
-def verify_mask(filename: str):
-    import numpy as np
-    img_path="dataset/images/train/"+filename+".jpg"
-    label_path="dataset/labels/train/"+filename+".txt"
-    
-    select_img(img_path)
-    img=cv2.imread(os.environ.get("IMAGE_PATH"))
-
-    h, w = img.shape[:2]
-    with open(label_path, "r") as f:
-        for line in f.readlines():
-            parts = line.strip().split()
-            cls = int(parts[0])
-            coords = list(map(float, parts[1:]))
-            points = [(int(coords[i] * w), int(coords[i+1] * h)) for i in range(0, len(coords), 2)]
-            cv2.polylines(img, [np.array(points)], isClosed=True, color=(0,255,0), thickness=2)
-
-    # Mostrar
-    show_img(img)

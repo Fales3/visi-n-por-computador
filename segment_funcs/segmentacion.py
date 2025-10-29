@@ -1,5 +1,4 @@
 import cv2
-import os
 import numpy as np
 import aruco.aruco_funcs as ar_f
 import models.yolo_funcs as yolo_f
@@ -130,80 +129,3 @@ def measurements_with_pose(img, contour, camera_matrix, rvec, tvec):
     print(f"Ancho: {width:.2f} cm | Alto: {height:.2f} cm")
 
     return width, height, rect, real_contour_cm
-
-
-def measurements_with_pose_with_Z(img, contour, camera_matrix, rvec, tvec):
-    """
-    Calcula el ancho y alto reales (en cm) de un contorno detectado,
-    proyectándolo al espacio 3D usando la pose de la cámara.
-    Ajusta automáticamente el plano del objeto para corregir inclinaciones.
-    """
-    # --- Convertir rotación y traslación ---
-    R, _ = cv2.Rodrigues(rvec)
-    tvec = tvec.reshape(3, 1)
-
-    # --- Función auxiliar: proyectar punto de imagen a plano Z=0 (en m) ---
-    def project_to_plane(u, v, K, R, t):
-        uv1 = np.array([u, v, 1.0])
-        # Dirección del rayo en coordenadas de cámara
-        ray_dir = np.linalg.inv(K) @ uv1
-        ray_dir = R.T @ ray_dir
-        cam_center = -R.T @ t
-        # Intersección con plano Z=0
-        s = -cam_center[2, 0] / ray_dir[2]
-        P = cam_center.flatten() + s * ray_dir.flatten()
-        return P  # en metros
-
-    # --- Proyectar todos los puntos del contorno a coordenadas reales ---
-    real_contour = np.array([
-        project_to_plane(float(u), float(v), camera_matrix, R, tvec)
-        for [[u, v]] in contour
-    ])
-
-    # Convertir a centímetros
-    real_contour_cm = real_contour * 100.0
-
-    # --- Ajustar el plano del objeto (regresión ax + by + cz + d = 0) ---
-    X = real_contour_cm
-    A = np.c_[X[:,0], X[:,1], np.ones(X.shape[0])]
-    coeffs, _, _, _ = np.linalg.lstsq(A, -X[:,2], rcond=None)
-    a, b, d = coeffs
-    normal = np.array([a, b, 1.0])
-    normal /= np.linalg.norm(normal)
-
-    # --- Construir sistema local del objeto ---
-    z_axis = normal
-    # Si el plano está casi paralelo al eje Z, evitar degeneración
-    ref = np.array([0, 0, 1])
-    if abs(np.dot(z_axis, ref)) > 0.9:
-        ref = np.array([0, 1, 0])
-    x_axis = np.cross(ref, z_axis)
-    x_axis /= np.linalg.norm(x_axis)
-    y_axis = np.cross(z_axis, x_axis)
-
-    # --- Proyectar puntos en el sistema local ---
-    origin = real_contour_cm.mean(axis=0)
-    proj_local = np.stack([
-        np.dot(real_contour_cm - origin, x_axis),
-        np.dot(real_contour_cm - origin, y_axis)
-    ], axis=1)
-
-    # --- Calcular dimensiones ---
-    w = proj_local[:,0].max() - proj_local[:,0].min()
-    h = proj_local[:,1].max() - proj_local[:,1].min()
-
-    ancho = abs(w)
-    alto = abs(h)
-
-    print(f" - Dimensiones (cm): ancho={ancho:.2f}, alto={alto:.2f}")
-
-    # --- Dibujar contorno proyectado (opcional para debug visual) ---
-    pts2d = proj_local.astype(np.float32)
-    rect = cv2.minAreaRect(pts2d)
-    box = cv2.boxPoints(rect).astype(int)
-    debug = img.copy()
-    cv2.drawContours(debug, [box], 0, (0,255,0), 2)
-    # cv2.imshow("Plano Local", debug)
-    # cv2.waitKey(0)
-
-    return ancho, alto, rect, proj_local

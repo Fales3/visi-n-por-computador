@@ -1,5 +1,4 @@
 import cv2
-import os
 import numpy as np
 import segment_funcs.img_funcs as img_f
 import segment_funcs.segmentacion as seg
@@ -13,7 +12,7 @@ U-Net:                      Fotos individuales
 def load_yolo_model():
     from ultralytics import YOLO
 
-    model = YOLO("yolo11m-seg.pt")
+    model = YOLO("yolo_models/yolo11m-seg.pt")
 
     return model
 
@@ -69,7 +68,15 @@ def load_img_to_model_calibrated(img_name, model, camera_matrix, dist_coeffs, rv
         if len(contours) > 0:
             cnt = contours[0]
 
-            seg.measurements_with_pose(img_contours, cnt, camera_matrix, rvec, tvec)
+            #Conversión de puntos a coordenadas reales
+            cnt_undist = cv2.undistortPoints(
+            cnt.astype(np.float32),
+            camera_matrix,
+            dist_coeffs,
+            P=camera_matrix
+    )
+
+            seg.measurements_with_pose(img_contours, cnt_undist, camera_matrix, rvec, tvec)
 
     for r in results:
         for box in r.boxes:

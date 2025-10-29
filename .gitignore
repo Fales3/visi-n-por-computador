@@ -216,3 +216,8 @@ dataset
 runs/
 results/
 images/
+sam2.1_hiera_small.pt
+repo_sam2/
+test_folder/
+prueba_cesar.zip
+yolo_models/
