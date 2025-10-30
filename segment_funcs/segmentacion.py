@@ -38,7 +38,7 @@ def classic_segment_img(img_name:str, is_aruco: bool= False, blurring_method: st
     if show is True:
         img_f.show_img(img_contours)
 
-def segment_with_aruco_and_yolo(img_name: str, white_background: bool= False, aruco_side_cm: float=5.0, show_img: bool= True):
+def segment_with_aruco_and_yolo(img_name: str, white_background: bool= False, aruco_side_cm: float=4.9, show_img: bool= True):
     img= img_f.select_img(img_name)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img_rgb=img.copy()

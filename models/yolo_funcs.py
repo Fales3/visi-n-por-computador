@@ -16,7 +16,7 @@ def load_yolo_model():
 
     return model
 
-def load_img_to_model(img_name, model, factor_px_cm= 1):
+def load_img_to_model(img_name, model, factor_px_cm):
     
     img=img_f.select_img(img_name)
     results = model(img)

@@ -19,7 +19,7 @@ def generate_aruco(aruco_id: int=0, pixels: int= 200):
 
     return aruco_dict
 
-def detect_aruco(img, img_rgb, real_side_cm: float= 5.0):
+def detect_aruco(img, img_rgb, real_side_cm: float= 4.9):
     import numpy as np
 
     aruco_dict, parameters= get_aruco_dict()
