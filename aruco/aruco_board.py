@@ -9,7 +9,7 @@ import segment_funcs.img_funcs as img_f
 import aruco.aruco_funcs as ar_f
 import models.yolo_funcs as yolo_f
 
-def get_aruco_board(aruco_dict, size: tuple= (5,7), square_length: int =30, marker_length: int =20 ):
+def get_aruco_board(aruco_dict, size: tuple= (5,7), square_length: float =0.03, marker_length: float =0.02):
     board = aruco.CharucoBoard(
         size,
         square_length,
@@ -68,8 +68,8 @@ def calibrate_charuco(dir_name: str):
     # --- Parámetros del tablero ---
     squares_x = 5      # número de casillas horizontales
     squares_y = 7      # número de casillas verticales
-    square_length = 0.029   # tamaño de cada casilla (mm)
-    marker_length = 0.019   # tamaño del marcador ArUco dentro (mm)
+    square_length = 0.029   # tamaño de cada casilla (m)
+    marker_length = 0.019   # tamaño del marcador ArUco dentro (m)
     aruco_dict, parameters= ar_f.get_aruco_dict()
 
     # --- Crear tablero ---
@@ -123,36 +123,46 @@ def load_calibration(filename: str):
 
     return camera_matrix, dist_coeffs
 
-def detect_charuco_pose(img, camera_matrix, dist_coeffs, marker_length: float= 0.049):
+def detect_charuco_pose(img, camera_matrix, dist_coeffs, marker_length: float= 0.019):
+    #Crear diccionario y tablero
     aruco_dict, parameters= ar_f.get_aruco_dict()
-    charuco_board=get_aruco_board(aruco_dict, (5, 7), 0.029 ,0.019)
-    detector = cv2.aruco.CharucoDetector(charuco_board)
-    charuco_corners, charuco_ids, marker_corners, marker_ids = detector.detectBoard(img)
+    charuco_board=get_aruco_board(aruco_dict, (5, 7), marker_length+0.01, marker_length)
+    charuco_params = cv2.aruco.CharucoParameters()
 
-    if charuco_ids is not None and len(charuco_ids) > 3:
-        success, rvec, tvec = cv2.aruco.estimatePoseCharucoBoard(
-            charuco_corners,
-            charuco_ids,
-            charuco_board,
-            camera_matrix,
-            dist_coeffs,
-            None,
-            None
-        )
+    #Parámetros del charuco
+    detector = cv2.aruco.CharucoDetector(charuco_board, charuco_params, parameters)
 
-        if success:
-            print("Pose estimada:")
-            print("rvec:", rvec)
-            print("tvec:", tvec)
+    #Imagen sin distorsión
+    img_undist = cv2.undistort(img, camera_matrix, dist_coeffs)
 
-            # Dibuja el eje del tablero
-            cv2.drawFrameAxes(img, camera_matrix, dist_coeffs, rvec, tvec, marker_length)
-            img_f.show_img(img)
+    charuco_corners, charuco_ids, marker_corners, marker_ids = detector.detectBoard(img_undist)
 
-            return rvec, tvec
-    else:
+    if charuco_ids is None or len(charuco_ids) < 4:
         print("No se detectaron suficientes esquinas ChArUco.")
         return None, None
+    
+    #Estimar Pose
+    success, rvec, tvec = cv2.aruco.estimatePoseCharucoBoard(
+        charuco_corners,
+        charuco_ids,
+        charuco_board,
+        camera_matrix,
+        dist_coeffs,
+    )
+
+    if not success:
+        print("⚠️ No se pudo estimar la pose del tablero.")
+        return None, None
+
+    print("Pose estimada:")
+    print("rvec:", rvec)
+    print("tvec:", tvec)
+
+    # Dibuja el eje del tablero
+    cv2.drawFrameAxes(img, camera_matrix, dist_coeffs, rvec, tvec, marker_length)
+    img_f.show_img(img)
+
+    return rvec, tvec
 
 def detect_aruco_pose(img, camera_matrix, dist_coeffs, marker_length: float= 0.049):
     aruco_dict, parameters = ar_f.get_aruco_dict()

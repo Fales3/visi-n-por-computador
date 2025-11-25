@@ -3,7 +3,7 @@ import cv2.aruco as aruco
 
 def get_aruco_dict():
     # Diccionario de marcadores
-    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_5X5_50)
     parameters = aruco.DetectorParameters()
 
     return aruco_dict, parameters
